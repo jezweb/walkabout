@@ -1,0 +1,14 @@
+{
+  "name": "walkabout",
+  "owner": {
+    "name": "Jeremy Dawes",
+    "email": "jeremy@jezweb.net"
+  },
+  "plugins": [
+    {
+      "name": "walkabout",
+      "source": "./",
+      "description": "Guided voice tour + ask-the-app AI guide + one-command narrated demo videos."
+    }
+  ]
+}

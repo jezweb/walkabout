@@ -39,11 +39,12 @@ construction, not by validation.**
 | `templates/steps.ts` | Steps config + localStorage helpers |
 | `templates/halo.css` | The spotlight halo (3 rules, incl. reduced-motion) |
 | `templates/gen-tour-audio.py` | Segmented scripts → ElevenLabs `with-timestamps` → MP3s + generated cue timings |
-| `templates/record-tour.mjs` | Tour → narrated MP4, fully headless (Playwright video + ffmpeg muxes the source MP3s at measured offsets) |
+| `templates/record-tour.mjs` | Tour → narrated MP4, fully headless (lossless CDP screencast + ffmpeg muxes the source MP3s at measured offsets) |
 | `templates/record-demo.mjs` | Scripted feature demos: `{say, do}` segments — the harness types/clicks on narration cue |
 | `templates/Assist.tsx` + `assist-routes.ts` + `assist-knowledge.ts` + `questions.sql` | The ask-the-app guide: widget, endpoint, app-guide content, question log schema |
-| `skill/SKILL.md` | A [Claude Code](https://claude.com/claude-code) skill that walks an AI agent through adopting the whole pattern |
+| `skills/walkabout/SKILL.md` | A [Claude Code](https://claude.com/claude-code) skill that walks an AI agent through adopting the whole pattern |
 | `docs/pattern.md` | The deep reference: design rationale and every gotcha earned in production |
+| `.claude-plugin/` | Plugin + marketplace manifests so this repo installs via `/plugin` |
 
 The templates are **real production files**, not scaffolds — copy them into
 your app and adapt names, styling, and the auth bootstrap. The gotchas in
@@ -69,10 +70,23 @@ One engine, three script lengths:
 
 ## Using with Claude Code
 
-Copy `skill/` into `~/.claude/skills/walkabout/` (with `templates/` beside
-it) and ask Claude Code to "add a walkabout to this app". The skill carries
-the build order, the verification gates ("test by wandering, not by
-watching"), and the traps.
+Install it as a plugin (recommended) — this repo is its own marketplace:
+
+```
+/plugin marketplace add jezweb/walkabout
+/plugin install walkabout@walkabout
+```
+
+Then ask Claude Code to **"add a walkabout to this app"** (or run
+`/walkabout:walkabout`). The skill carries the build order, the verification
+gates ("test by wandering, not by watching"), and the traps; `templates/` and
+`docs/pattern.md` ride along in the plugin.
+
+Prefer a manual skill install? Copy the skill folder instead:
+
+```
+cp -R skills/walkabout ~/.claude/skills/walkabout   # then restart Claude Code
+```
 
 ## License
 

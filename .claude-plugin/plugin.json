@@ -1,0 +1,12 @@
+{
+  "name": "walkabout",
+  "description": "Add a Walkabout to an app: a guided voice tour that walks the real pages with a narration-synced moving spotlight, an ask-the-app AI guide that logs every question, and one-command narrated demo videos.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jeremy Dawes",
+    "email": "jeremy@jezweb.net"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/jezweb/walkabout",
+  "repository": "https://github.com/jezweb/walkabout"
+}

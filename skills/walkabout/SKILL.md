@@ -22,12 +22,12 @@ You're giving an app three connected capabilities, built in this order:
 The goal: the owner never gives a demo again. The app onboards, explains,
 and records itself.
 
-All templates in `templates/` are FieldProof's REAL working files — worked
-examples, not scaffolds. Read them, transplant them, adapt names/paths/
-styling to the host app. The deep reference (design rationale, full gotcha
-list, adopter notes) is `docs/pattern.md` in the Walkabout repo
-(github.com/jezweb/walkabout) — update it when you learn something new, and
-add the app to its Adopters list.
+All templates live in `${CLAUDE_PLUGIN_ROOT}/templates/` (this plugin's
+`templates/` dir) — FieldProof's REAL working files, worked examples not
+scaffolds. Read them, transplant them, adapt names/paths/styling to the host
+app. The deep reference (design rationale, full gotcha list, adopter notes) is
+`${CLAUDE_PLUGIN_ROOT}/docs/pattern.md` (also at github.com/jezweb/walkabout) —
+update it when you learn something new, and add the app to its Adopters list.
 
 ## Phase 1 — the tour
 
