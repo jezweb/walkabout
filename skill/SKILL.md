@@ -61,6 +61,17 @@ around mid-step. The guide must pause itself when you leave the step's page
 audio or yank you back when you click things. Run it on the page with the
 highest z-index content (maps!) — the card is `z-[1100]` for a reason.
 
+**Verifying with automation**: automated Chrome CAN play the narration — two
+ways to grant it. Launch with `--autoplay-policy=no-user-gesture-required`
+(the recorder templates already do), or start the tour with a REAL input
+click — `page.click()` / `getByRole(...).click()` synthesise trusted events
+and count as the gesture. What does NOT count: `page.evaluate(() =>
+btn.click())` — a JS-initiated click grants no gesture, so `play()` rejects,
+`ontimeupdate`/`onended` never fire, and the spotlight + auto-advance look
+broken when they aren't. End-to-end proof in automation: start the tour and
+wait for the step counter to advance by itself (proven on FieldProof —
+headless deep-link runs auto-advance fine with the flag).
+
 Traps that WILL bite if you deviate from the template (full list in the
 knowledge doc):
 

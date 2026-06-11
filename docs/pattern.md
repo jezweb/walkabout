@@ -177,6 +177,14 @@ same alignment data but adds nothing over segment-level — stop here.
     (the click is a separate event cycle, so it doesn't re-fire).
 - **State**: one localStorage key (`<app>:tour` = done|dismissed). Offer once;
   the footer restarts it regardless.
+- **Automated verification needs the gesture granted properly.** Playwright's
+  `page.click()` IS a trusted gesture (audio plays, auto-advance runs);
+  `page.evaluate(() => btn.click())` is NOT — narration silently never
+  starts and the tour looks broken in automation while being fine for
+  humans. Either use real input clicks or launch with
+  `--autoplay-policy=no-user-gesture-required`. (An adopting agent worked
+  around this by faking `currentTime` — unnecessary once the flag/click
+  distinction is known.)
 - **Test by wandering, not by watching.** Every tour bug so far (map z-index
   eating the card, the audio-replay-on-click bug) was found by a human
   clicking around the app WHILE the tour ran — never by replaying it
