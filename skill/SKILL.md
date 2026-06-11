@@ -125,7 +125,10 @@ Also set `STEPS` in `record-tour.mjs` to the app's step count (it's hardcoded).
 - `record-demo.mjs` — feature demos: segments of `{ say, do?, delayMs? }`.
   Narration cached by text-hash (iterating on actions is free); each
   action fires at its narration offset — the voice says "type the
-  address…" while the harness types. Other viewports are one line
+  address…" while the harness types. Write actions with ROLE-BASED
+  locators (`getByRole('button', { name: … })`, not CSS) — the demo then
+  only renders when the markup carries real roles and names, making every
+  demo an accessibility regression test for free. Other viewports are one line
   (390×844 → 9:16 Shorts). The same specs yield GIF slices and
   reproducible screenshots for written guides.
 

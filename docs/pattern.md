@@ -276,6 +276,24 @@ slice GIFs per step for embedded how-tos (`ffmpeg -ss <offset> -t <dur>`
 against the cue offsets); for Jezweb-owned apps the videos can go public /
 YouTube; record at a 9:16 mobile viewport for YouTube Shorts.
 
+## The accessibility dividend
+
+A demo script is a machine-driven user (Jez's observation, 2026-06-11: "it
+makes sure everything is clickable and usable"). Playwright's actionability
+checks — visible, stable, enabled, receives events — fail the recording if a
+flow regresses, so demo builds double as smoke tests of every demonstrated
+journey. The tour side contributes too: aria-labels on every icon control,
+`prefers-reduced-motion` on the halo, and voice+text dual-channel delivery.
+
+Make it count fully: **write demo actions with role-based locators** —
+`page.getByRole('button', { name: 'Search' })`, not a CSS selector. A CSS
+click passes on a div-with-onclick that keyboard and screen-reader users
+can't operate; a role locator only resolves when the markup carries real
+roles and accessible names. Demos written this way are an accessibility
+regression test you get for free — if the semantics break, the video build
+breaks. (`data-tour` attributes stay for the SPOTLIGHT targets, which are
+regions, not controls.)
+
 ## Lineage — what the predecessors taught
 
 Two earlier Jezweb skills attempted narrated demo videos and were retired in
