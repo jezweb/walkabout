@@ -330,6 +330,63 @@ regression test you get for free — if the semantics break, the video build
 breaks. (`data-tour` attributes stay for the SPOTLIGHT targets, which are
 regions, not controls.)
 
+## The verification use: a demo spec is change-proof (a clinical app, 2026-06-11)
+
+The accessibility dividend above is the soft version of a harder claim. **A
+Walkabout spec is a change-verification harness and a client-facing proof
+artifact, not only a marketing asset.** This is a distinct axis from the three
+content tiers: same engine, but the output is evidence rather than promo.
+
+It earned its place resolving a QA-trust crisis. The QA reviewer flagged a
+batch of items as "marked done but still broken". The thing at stake was the
+team's credibility, not any one fix. Two questions had to be answered per item, and
+one Walkabout spec answers both:
+
+- **`--check` is the verification.** Run the demo's actions WITHOUT recording:
+  action-only, role-based locators, fail-loud. It drives the real fix end to
+  end on the built and deployed app, and throws if a step can't resolve. That
+  proves the fix is reachable and works on the user-visible surface, not merely
+  that unit tests pass and the file merged. It directly catches the
+  `test-pass-vs-surface-live` failure mode (green plus merged plus deployed,
+  but the changed component isn't on any reachable route, or the user is being
+  served a stale bundle). Pair it with a DB-state assertion for mutation flows:
+  after the cancel/uncancel demo, assert the case row is back to `active` /
+  `consultation_and_booking`.
+- **The recorded clip is the proof.** Narrated, it's the artifact you hand QA
+  or the client: "here's the fix working, on prod, today". In a trust-repair
+  situation a showable 30-second clip beats any amount of "it's fixed, honest".
+
+One spec, both jobs: a regression check that fails the build if the journey
+breaks, and a shareable proof you attach to the ticket or send to the client.
+The verdict from that crisis: `--check` plus a DB-state assertion confirmed
+the fixes WERE live (the user had been seeing a stale cache, fixed separately)
+for every contested item but one, which was genuinely unbuilt and got a real
+fix. Evidence closed an argument that assertions couldn't.
+
+Adopter wrinkles worth banking (from the clinical-app adopter):
+
+- **Record-mode races multi-dialog mutation flows.** In `--check` the harness
+  awaits each action in sequence, so it's safe. In RECORD mode actions fire on
+  the narration's measured offsets, so a step that opens a second dialog can
+  fire before the first has closed. Guard it: `await dialog.waitFor({ state:
+  'detached' })` inside the segment's `do` before the next action (and give the
+  narration room to breathe). The cancel-then-uncancel demo needed this;
+  `--check` of the same spec did not.
+- **A PII-safe target is mandatory for real-data apps.** This app holds real
+  patient records, so recording and verifying run against a LOCAL seeded build (same
+  code as prod) or a seeded test login, never prod patient data. The
+  verification is still valid because the code is identical; the camera and the
+  cleanup never touch a real record. Use the app's own test-auth/seed path and
+  a fixed demo case.
+- **better-auth cookie apps**: capture a Playwright `storageState` once (sign in
+  as the seeded test user, save the session JSON, gitignore it) and reuse it for
+  headless `--check` and record runs. Same shape as the OAuth adopters above.
+- **Sharing the clip to Google Chat**: set the MIME type on upload (`curl -F
+  "file=@clip.mp4;type=video/mp4"`) or Chat stores it as
+  `application/octet-stream` and shows a dead, un-playable file instead of an
+  inline video preview. (Filed upstream for an auto-detect fix; the explicit
+  type is the stopgap.)
+
 ## Lineage — what the predecessors taught
 
 Two earlier Jezweb skills attempted narrated demo videos and were retired in
@@ -489,6 +546,28 @@ timestamped tracks, interleave segments — never overlapping).
     when that module is off, with audio keyed by filename so the rest never
     misaligns. Wart: the chat step mints an empty conversation per run (the only
     non-self-redirecting way to reach the chat surface).
+- **Clinical case-management app** (7th, 2026-06-11, private healthcare client)
+  — a different USE, not a different host: the first adopter to run Walkabout as
+  a **change-verification + client-proof** tool rather than onboarding (see "The
+  verification use" above). A QA-trust crisis (items "marked done but broken")
+  was resolved with `record-demo.mjs` specs run two ways: `--check` (action-only,
+  role-based, fail-loud, plus a DB-state assertion) proved each contested fix was
+  live on the deployed app, and the narrated clip went to QA as the proof.
+  Lessons:
+  - **Healthcare data forces a PII-safe target**: record and verify against a
+    seeded test login or a local build (identical code), never prod patient
+    records. The verification still holds; the camera never sees a real patient.
+  - **better-auth `storageState`** for headless auth (sign in once as the seeded
+    test user, reuse the saved session) — same path RightCover flagged for
+    OAuth, lived here on a cookie app.
+  - **Multi-dialog mutation flows need the record-mode dialog-detach guard**
+    (`waitFor({ state: 'detached' })`) that `--check` doesn't, because record
+    mode fires actions on narration offsets, not sequentially. The cancel→
+    uncancel demo surfaced it.
+  - **Chat-share MIME-type stopgap**: `;type=video/mp4` on the curl upload or
+    Google Chat renders a dead octet-stream file. Filed upstream for auto-detect.
+  - Took the **recorder half only** — the Phase 1 in-app tour was deferred; this
+    adopter wanted the verification engine, not the onboarding experience.
 
 ## Where it's going next
 
