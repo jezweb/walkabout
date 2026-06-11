@@ -15,7 +15,9 @@
  * against the first frame's epoch timestamp — then ffmpeg muxes the
  * ORIGINAL MP3s at those offsets. Source-quality audio, sync by construction.
  *
- * Usage: node scripts/record-tour.mjs
+ * Usage:
+ *   WALKABOUT_URL=https://your-app  WALKABOUT_AUTH_STATE=media/auth-state.json \
+ *   WALKABOUT_STEPS=7  node scripts/record-tour.mjs
  * Output: media/tour-demo.mp4
  */
 import { chromium } from 'playwright';
@@ -29,9 +31,19 @@ const FRAMES_DIR = path.join(OUT_DIR, 'frames-tmp');
 fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
 fs.mkdirSync(FRAMES_DIR, { recursive: true });
 const MP4 = path.join(OUT_DIR, 'tour-demo.mp4');
-// ADAPT: your app's headless sign-in (this example: an API key into localStorage).
-const API_KEY = process.env.APP_API_KEY ?? '';
-const STEPS = 7;
+
+const BASE = process.env.WALKABOUT_URL || 'http://localhost:5173';
+const START = process.env.WALKABOUT_START || '/'; // page where the tour mounts
+const STEPS = Number(process.env.WALKABOUT_STEPS || 7);
+// AUTH (default — any cookie/OAuth app): a Playwright storageState file holding a
+// live session cookie. Sign in once by hand → `context.storageState({ path })`, or
+// mint one headlessly via a test-auth/dev-login endpoint. gitignore it (live cookie).
+// API-key apps can instead localStorage-set a key on a setup page before recording.
+const AUTH_STATE = process.env.WALKABOUT_AUTH_STATE || path.join(ROOT, 'media/auth-state.json');
+if (!fs.existsSync(AUTH_STATE)) {
+  console.error(`No auth state at ${AUTH_STATE}. See the AUTH note in this file's header.`);
+  process.exit(1);
+}
 
 const mp3 = (n) => path.join(ROOT, `public/tour/step-${n}.mp3`);
 const durationS = (file) =>
@@ -47,21 +59,10 @@ const lastDuration = durationS(mp3(STEPS));
 const browser = await chromium.launch({
   args: ['--autoplay-policy=no-user-gesture-required'],
 });
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-
-// Sign in + suppress the first-visit offer (localStorage persists per-origin
-// across pages in the context).
-console.log('signing in…');
-const setup = await context.newPage();
-await setup.goto('https://your-app.example.com/operations');
-await setup.evaluate(
-  ([key]) => {
-    localStorage.setItem('app:api_key', key);
-    localStorage.setItem('app:tour', 'done');
-  },
-  [API_KEY]
-);
-await setup.close();
+const context = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+  storageState: AUTH_STATE,
+});
 
 // The take: deep-link straight into the tour; auto-advance does the rest.
 console.log('recording the tour (lossless screencast)…');
@@ -94,7 +95,7 @@ await cdp.send('Page.startScreencast', {
   everyNthFrame: 1,
 });
 
-await page.goto('https://your-app.example.com/operations?tour=1');
+await page.goto(`${BASE}${START}?tour=1`);
 const timeOrigin = await page.evaluate(() => performance.timeOrigin);
 
 await page.waitForFunction(

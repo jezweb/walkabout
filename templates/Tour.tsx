@@ -97,6 +97,19 @@ function cuesForStep(step: (typeof TOUR_STEPS)[number]): TourCue[] {
   return step.highlight ? [{ selector: step.highlight, at: 0 }] : [];
 }
 
+/**
+ * A step's page is "current" when the location is that page OR a child of it.
+ * PREFIX-match, not exact: a self-redirecting index route (`/dashboard/chat` →
+ * `/dashboard/chat/{uuid}`) would never register "arrived" under exact-match,
+ * so the wander guard mis-pauses (and with the wrong effect deps, hard-hangs);
+ * drilling into a detail within the same section (a list → one row) should also
+ * not count as wandering. Router apps only — a tabbed/desktop host compares a
+ * `tab` prop with exact equality instead (see the Zoomtrail adopter note).
+ */
+function onStepPage(pathname: string, stepPath: string): boolean {
+  return pathname === stepPath || pathname.startsWith(stepPath + '/');
+}
+
 export function Tour({
   onClose,
   initialStep = 0,
@@ -201,7 +214,7 @@ export function Tour({
   // not look like wandering), any other path holds the tour; play resumes
   // where it left off, back on the step's page.
   useEffect(() => {
-    if (location.pathname === step.path) {
+    if (onStepPage(location.pathname, step.path)) {
       arrivedRef.current = true;
       return;
     }
@@ -218,7 +231,7 @@ export function Tour({
     // step (found on Zoomtrail, steps 4+5 both on the Library tab).
   }, [i, location.pathname, step.path, paused]);
 
-  const wandered = location.pathname !== step.path;
+  const wandered = !onStepPage(location.pathname, step.path);
   const last = i === TOUR_STEPS.length - 1;
 
   const resume = useCallback(() => {

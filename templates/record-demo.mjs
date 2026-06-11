@@ -34,10 +34,16 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../.
 const OUT_DIR = path.join(ROOT, 'media');
 const CACHE_DIR = path.join(OUT_DIR, 'demo-cache');
 fs.mkdirSync(CACHE_DIR, { recursive: true });
-// ADAPT: your app's headless sign-in (this example: an API key into localStorage).
-const API_KEY = process.env.APP_API_KEY ?? '';
+const BASE = process.env.WALKABOUT_URL || 'http://localhost:5173';
+// AUTH: a Playwright storageState file with a live session cookie (see
+// record-tour.mjs header). gitignore it. API-key apps can localStorage-set instead.
+const AUTH_STATE = process.env.WALKABOUT_AUTH_STATE || path.join(ROOT, 'media/auth-state.json');
 const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY; // https://elevenlabs.io
 const VOICE = 'IKne3meq5aSn9XLyUdCD'; // Charlie — Australian, conversational
+if (!fs.existsSync(AUTH_STATE)) {
+  console.error(`No auth state at ${AUTH_STATE}. See record-tour.mjs header for how to make one.`);
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // Demo definitions. say = narration; do = action fired when that line starts
@@ -140,17 +146,10 @@ async function recordDemo(browser, name, demo) {
   console.log(`recording ${name}…`);
   const narration = await narrationFor(name, demo.segments);
 
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const setup = await context.newPage();
-  await setup.goto('https://your-app.example.com/operations');
-  await setup.evaluate(
-    ([key]) => {
-      localStorage.setItem('app:api_key', key);
-      localStorage.setItem('app:tour', 'done');
-    },
-    [API_KEY]
-  );
-  await setup.close();
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    storageState: AUTH_STATE,
+  });
 
   const page = await context.newPage();
   // Lossless frame capture (see header) — frames straight to disk + epoch ts.
@@ -168,7 +167,7 @@ async function recordDemo(browser, name, demo) {
   });
   await cdp.send('Page.startScreencast', { format: 'png', maxWidth: 1440, maxHeight: 900, everyNthFrame: 1 });
 
-  await page.goto(`https://your-app.example.com${demo.start}`);
+  await page.goto(`${BASE}${demo.start}`);
   await page.waitForLoadState('networkidle').catch(() => undefined);
   await sleep(800); // let the page settle before the voice starts
 
@@ -237,17 +236,12 @@ async function recordDemo(browser, name, demo) {
 // smoke + a11y regression test — recording mode tolerates a missed action
 // to save the take; check mode must not).
 async function checkDemo(browser, name, demo) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    storageState: AUTH_STATE,
+  });
   const page = await context.newPage();
-  await page.goto('https://your-app.example.com/operations');
-  await page.evaluate(
-    ([key]) => {
-      localStorage.setItem('app:api_key', key);
-      localStorage.setItem('app:tour', 'done');
-    },
-    [API_KEY]
-  );
-  await page.goto(`https://your-app.example.com${demo.start}`);
+  await page.goto(`${BASE}${demo.start}`);
   await page.waitForLoadState('networkidle').catch(() => undefined);
   const failures = [];
   for (let k = 0; k < demo.segments.length; k++) {
