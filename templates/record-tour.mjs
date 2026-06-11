@@ -12,6 +12,14 @@
  *
  * Usage: node scripts/record-tour.mjs
  * Output: media/tour-demo.mp4 (+ the raw silent .webm)
+ *
+ * AUTH: the localStorage API-key bootstrap below is for API-key auth. For a
+ * cookie/OAuth app (better-auth etc.) DON'T add an API key — sign in once by
+ * hand and save the session:
+ *     await context.storageState({ path: 'auth-state.json' });  // gitignore it
+ * then create the context with `{ storageState: 'auth-state.json' }` and delete
+ * the sign-in page block. (Or mint a session via an existing test-auth
+ * endpoint.) Set STEPS to your app's step count.
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';

@@ -308,6 +308,18 @@ timestamped tracks, interleave segments — never overlapping).
   since the app has no footer — exposed as a "Take the guided tour" button on
   its How-it-works page. Confirms the four-piece core transplants cleanly; the
   timing/spotlight upgrades are opt-in on top.
+- **RightCover** (3rd, 2026-06-11) — the FULL Phase 1 + 2 on a shadcn host:
+  segmented cues + moving spotlight + auto-advance + pause-on-wander + `?tour=N`,
+  plus the ask-the-app Guide (cheap model thinking-off, grounded answers, a D1
+  question log). No footer, so restart fires via a `START_TOUR_EVENT` window
+  event from a How-it-works "Take the tour" button and the Guide FAB. Lessons
+  folded back into the skill: the styling transplant is ~6 class mappings on a
+  shadcn host (worth a table); `halo.css`'s `outline: var(--token)` works on a
+  full-`hsl()` token, no `color-mix`; and the deps-`[i]` replay bug bit for real.
+  Phase 3 (videos) deliberately deferred — the app is OAuth-only, so headless
+  recording needs `storageState` or an existing test-auth endpoint, not the
+  localStorage API-key path. That's what surfaced the Phase-3 auth caveat now
+  in the skill.
 
 ## Where it's going next
 

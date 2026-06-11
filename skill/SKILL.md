@@ -34,6 +34,15 @@ add the app to its Adopters list.
 Copy `Tour.tsx`, `steps.ts`, `halo.css` (append to the app's global CSS;
 swap the two colour vars to the app's tokens). Then:
 
+**Restyle for the host first — the templates carry the source app's classes.**
+`Tour.tsx` and `Assist.tsx` use `brand-card`, `font-display`, `primary-dark`,
+`bg-surface`, `text-warning`. On a shadcn host (the common case) map them once:
+`brand-card` → `rounded-lg border bg-card`, `font-display` → drop, `primary-dark`
+→ `primary`, `text-white` → `text-primary-foreground`, `bg-surface` →
+`bg-background`, `text-warning` → `text-amber-600 dark:text-amber-400`.
+`halo.css`'s `outline: var(--token)` works even when the token is a full `hsl()`
+value (shadcn) — no `color-mix` needed.
+
 - Write 5–8 steps, one per page. Card `body` = 2 lines. Narration = 2–5
   `(selector, text)` segments per step in `gen-tour-audio.py`'s SCRIPTS dict
   — each segment describes ONE page section, top to bottom, like you're
@@ -91,8 +100,23 @@ specific page (the page path is sent as context).
 
 Copy `record-tour.mjs` and `record-demo.mjs` into the app's scripts dir.
 Needs: `playwright` devDependency, `ffmpeg`/`ffprobe` on PATH, seeded data
-that looks good on camera, and a headless-friendly sign-in (adapt the
-localStorage bootstrap at the top of each script).
+that looks good on camera, and a headless-friendly sign-in.
+
+**Headless auth is the real blocker, not a one-liner — solve it first.** The
+templates' `localStorage.setItem('<app>:api_key', …)` bootstrap ONLY works for
+API-key auth. Cookie/OAuth apps (better-auth and most modern stacks) can't do
+that — and you do NOT add an API-key feature just to record. Two real options:
+- **Playwright `storageState` (default, any auth, zero app change):** sign in
+  once by hand, `await context.storageState({ path: 'auth-state.json' })`,
+  gitignore that file (it holds a live session cookie), then the recorder uses
+  `newContext({ storageState: 'auth-state.json' })` and skips sign-in entirely.
+  Re-capture when the session TTL lapses.
+- **An existing test-auth / dev-login endpoint:** if the app already mints a
+  session behind a secret (common in starter kits), drive that headlessly.
+  Fully automated — but never reassign real data to a test user if its cleanup
+  cascades; read-only / shared views are safe.
+
+Also set `STEPS` in `record-tour.mjs` to the app's step count (it's hardcoded).
 
 - `record-tour.mjs` — records the tour headless and muxes the ORIGINAL MP3s
   at offsets measured by patching `Audio.play` in-page. Do NOT attempt

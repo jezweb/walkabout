@@ -15,6 +15,10 @@
  *
  * Usage: node scripts/record-demo.mjs [demo-name]   (default: all)
  * Output: media/demo-<name>.mp4
+ *
+ * AUTH: the localStorage API-key bootstrap is for API-key auth. Cookie/OAuth
+ * apps use Playwright `storageState` instead (sign in once, save auth-state.json,
+ * load it via `newContext({ storageState })`) — see record-tour.mjs header.
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
