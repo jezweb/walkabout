@@ -129,10 +129,13 @@ that — and you do NOT add an API-key feature just to record. Two real options:
 
 Also set `STEPS` in `record-tour.mjs` to the app's step count (it's hardcoded).
 
-- `record-tour.mjs` — records the tour headless and muxes the ORIGINAL MP3s
-  at offsets measured by patching `Audio.play` in-page. Do NOT attempt
-  getDisplayMedia tab-capture instead: it needs a human picking the tab and
-  fails in flag combinations — the mux approach is hands-free and cleaner.
+- `record-tour.mjs` — records the tour headless: LOSSLESS PNG frames via
+  CDP screencast (timestamps included), then ffmpeg assembles and muxes the
+  ORIGINAL MP3s at offsets measured by patching `Audio.play` in-page.
+  Two capture paths that DON'T work — don't re-derive them: Playwright's
+  `recordVideo` (its adaptive encoder makes the WHOLE page shimmer/blink
+  several times a second), and getDisplayMedia tab-capture (needs a human
+  picking the tab; a window pick records silent video).
 - `record-demo.mjs` — feature demos: segments of `{ say, do?, delayMs? }`.
   Narration cached by text-hash (iterating on actions is free); each
   action fires at its narration offset — the voice says "type the
