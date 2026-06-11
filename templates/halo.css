@@ -1,12 +1,15 @@
+/* Tour spotlight — halo around the element the guide is talking about.
+   Steady outline + slow breathing glow: a colour-swap pulse reads as
+   blinking/flashing during narration (Jez, 2026-06-11). */
 .tour-spotlight {
   outline: 3px solid var(--color-primary);
   outline-offset: 4px;
   border-radius: 0.75rem;
-  animation: tour-pulse 1.6s ease-in-out infinite;
+  animation: tour-breathe 3s ease-in-out infinite;
 }
-@keyframes tour-pulse {
-  0%, 100% { outline-color: var(--color-primary); }
-  50% { outline-color: var(--color-sage); }
+@keyframes tour-breathe {
+  0%, 100% { box-shadow: 0 0 0 7px rgb(108 173 63 / 0.1); }
+  50% { box-shadow: 0 0 0 12px rgb(108 173 63 / 0.28); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tour-spotlight { animation: none; }

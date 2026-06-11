@@ -151,6 +151,10 @@ same alignment data but adds nothing over segment-level — stop here.
   `z-[1100]`, not `z-50` — Leaflet panes go to 1000 (see
   `rules/leaflet-shadcn-zindex.md`). Found live when "the tour broke" on the
   map step.
+- **Don't colour-pulse the halo** — an outline that alternates between two
+  colours reads as "the image is blinking/flashing" during narration. Keep
+  the outline colour steady and breathe a soft box-shadow glow instead
+  (3s cycle). Found by Jez watching the recorded tour.
 - **Spotlight needs retries**: lazy routes + queries render at their own
   pace. Retry `querySelector` ~10× at 400ms before giving up, and remove the
   halo class on cleanup.
