@@ -1,0 +1,13 @@
+.tour-spotlight {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: 0.75rem;
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tour-pulse {
+  0%, 100% { outline-color: var(--color-primary); }
+  50% { outline-color: var(--color-sage); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight { animation: none; }
+}
