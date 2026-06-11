@@ -212,7 +212,11 @@ export function Tour({
     }
     audioRef.current?.pause();
     setPaused(true);
-  }, [location.pathname, step.path, paused]);
+    // `i` must be a dep: consecutive steps can share a path/tab, and without
+    // it this effect never re-runs to re-mark arrival after the narrate
+    // effect reset arrivedRef — wander pause is silently dead for the second
+    // step (found on Zoomtrail, steps 4+5 both on the Library tab).
+  }, [i, location.pathname, step.path, paused]);
 
   const wandered = location.pathname !== step.path;
   const last = i === TOUR_STEPS.length - 1;
