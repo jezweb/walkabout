@@ -1,11 +1,40 @@
-/* Tour spotlight — halo around the element the guide is talking about.
-   Steady outline + slow breathing glow: a colour-swap pulse reads as
-   blinking/flashing during narration (Jez, 2026-06-11). */
+/* Tour spotlight — when the guide reaches a section, a line DRAWS itself
+   clockwise around it (conic-gradient ring revealed by an animated sweep
+   angle — Jez's "cover revealing it" idea, 2026-06-11), light sage while
+   drawing, settling to dark green, then a soft glow breathes. The ring hugs
+   the INSIDE edge: several targets are overflow-hidden cards that would
+   clip an outside halo. Never colour-pulse — it reads as blinking. */
+@property --tour-sweep {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: false;
+}
+@property --tour-ring {
+  syntax: '<color>';
+  initial-value: #9dc480;
+  inherits: false;
+}
 .tour-spotlight {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 4px;
-  border-radius: 0.75rem;
-  animation: tour-breathe 3s ease-in-out infinite;
+  position: relative;
+  animation: tour-breathe 3s ease-in-out 0.9s infinite;
+}
+.tour-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.9rem;
+  padding: 3px;
+  background: conic-gradient(var(--tour-ring) var(--tour-sweep), transparent 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: tour-draw 0.9s ease-out forwards;
+}
+@keyframes tour-draw {
+  from { --tour-sweep: 0%; --tour-ring: #9dc480; }
+  to { --tour-sweep: 100%; --tour-ring: #5a9434; }
 }
 @keyframes tour-breathe {
   0%, 100% { box-shadow: 0 0 0 7px rgb(108 173 63 / 0.1); }
@@ -13,4 +42,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .tour-spotlight { animation: none; }
-}
+  .tour-spotlight::after { animation: none; --tour-sweep: 100%; --tour-ring: #5a9434; }
+
