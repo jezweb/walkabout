@@ -101,6 +101,10 @@ one audio file per step, nothing synchronised below step level.
   subtlety: an `arrivedRef` (set true once `location.pathname === step.path`,
   reset per step) distinguishes the tour's OWN navigation from the user's —
   without it the wander-detector pauses the tour on every step transition.
+  Second subtlety (Zoomtrail): **the wander effect needs the step index `i`
+  in its deps.** Consecutive steps sharing a path/tab leave the effect's other
+  deps unchanged, so after the narrate effect resets `arrivedRef` it's never
+  re-marked — wander pause is silently dead for the second step. Template fixed.
 - **Niceties worth the ~20 lines**: ←/→ keyboard stepping + Esc to close
   (skipped while typing in a field); `?tour=N` deep links for support
   ("click this and listen" — starts at step N; a fresh load has no gesture,
@@ -351,13 +355,27 @@ timestamped tracks, interleave segments — never overlapping).
 - **FieldProof** (1st, 2026-06-11) — the full version: segmented cues, moving
   spotlight, auto-advance, pause-on-wander, keyboard, `?tour=N` deep links,
   the ask-the-app companion.
-- **HR Helper** (2nd, 2026-06-11) — the lighter variant: one audio file per
-  step, single static `highlight` selector, manual Back/Next (no auto-advance
-  or moving spotlight yet). shadcn semantic tokens instead of FieldProof's
-  brand classes; restart wired via a `TourProvider` context (`useTourControls`)
-  since the app has no footer — exposed as a "Take the guided tour" button on
-  its How-it-works page. Confirms the four-piece core transplants cleanly; the
-  timing/spotlight upgrades are opt-in on top.
+- **HR Helper** (2nd, 2026-06-11) — shipped the lighter variant first (one
+  audio/step, static highlight, manual Back/Next), then upgraded to the **FULL
+  Phase 1** via the skill: segmented cues + moving spotlight + auto-advance +
+  pause-on-wander + keyboard + `?tour=N`. shadcn semantic tokens; restart via a
+  `TourProvider` context (`useTourControls`) since the app has no footer — a
+  "Take the guided tour" button on its How-it-works page. Confirms the
+  lighter→full upgrade is a clean swap: rewrite the generator's SCRIPTS to
+  segments, add per-segment `data-tour` anchors, drop in the full `Tour.tsx`.
+  Lesson folded into the skill: **`onStepPage(pathname, stepPath)` should
+  prefix-match, not exact-match.** Pause-on-wander keyed on `pathname ===
+  step.path` never registers "arrived" on a self-redirecting index route (the
+  chat step, `/dashboard/chat → /chat/{uuid}`), so the wander guard misbehaves
+  there; `pathname === stepPath || pathname.startsWith(stepPath + '/')` fixes it
+  and, as a bonus, clicking into a detail within the same section (clients list
+  → a client) no longer trips the pause. Then added **Phase 2 (the Guide)**:
+  corner FAB sharing the tour's corner via the same `TourProvider`
+  (`hidden={offer || active}`), grounded in `assist-knowledge.ts`,
+  defer-generically (no contact, per the owner), a question log + admin
+  "Guide questions" page. Three-question check passed live; 0.5–1.1s answers.
+  No KV on this app, so the template's `checkRateLimit` was dropped
+  (authed-only, fine). Phase 3 (videos) still pending.
 - **RightCover** (3rd, 2026-06-11) — the FULL Phase 1 + 2 on a shadcn host:
   segmented cues + moving spotlight + auto-advance + pause-on-wander + `?tour=N`,
   plus the ask-the-app Guide (cheap model thinking-off, grounded answers, a D1
@@ -372,6 +390,31 @@ timestamped tracks, interleave segments — never overlapping).
   recording needs `storageState` or an existing test-auth endpoint, not the
   localStorage API-key path. That's what surfaced the Phase-3 auth caveat now
   in the skill.
+- **Zoomtrail** (4th, 2026-06-11) — full Phase 1 + Phase 3 in a **Tauri
+  desktop app with TABS, no router** (upgraded from the lighter first-ship).
+  Lessons:
+  - Tabs swap in cleanly: `step.tab` + the raw `setTab` useState setter
+    replace `step.path`/navigate; wander detection compares a `tab` prop
+    against `step.tab` with the same `arrivedRef` trick (exact match is
+    correct for tabs — the prefix-match lesson is router-only). `?tour=N`
+    deep links still earn their place in a desktop app: the packaged webview
+    never has search params, but the demo recorder and headless tests both
+    enter through them on the web build.
+  - **Capture/recording apps need a recording-safety close**: the record
+    button is literally a spotlight target, so the parent must dismiss the
+    tour the moment capture starts or the narration leaks into the user's
+    take (`useEffect` on the recording phase; the header compass restarts).
+  - **Deterministic headless harness for the timing model**: patch
+    `window.Audio` in an init script — constructor wrapper pushes instances
+    to `window.__AUDIOS__`, `play()` → resolved promise — then tests seek
+    `currentTime` to assert the spotlight MOVES and dispatch `ended` to
+    assert auto-advance, no real playback. A ~24-assertion suite runs in ~30s.
+    This is the reusable answer to "automated Chrome blocks autoplay so the
+    ontimeupdate spotlight + onended advance can't be script-exercised."
+  - **A desktop app self-records its demo video via its web build**: `vite
+    preview` + the app's native-invoke stub (canned data) and the stock
+    `record-tour.mjs` works unchanged — a 122s narrated MP4, frame-extraction
+    + volumedetect verified, no Tauri involved.
 
 ## Where it's going next
 
@@ -386,8 +429,9 @@ timestamped tracks, interleave segments — never overlapping).
   action with its answer (`navigate:/runs` or `tour:3`), rendered as a
   "Show me" button. Conversation-driven navigation without an agent
   free-driving the UI — see the design call below.
-- **2 apps now — at the "promote this doc to a skill" threshold.** The next
-  adopter is the trigger to turn this doc into a skill.
+- **Four adopters, now a skill + public repo.** The next tier is a standalone
+  product identity (the WP embed below); each new adopter still lands its
+  lessons here and in the Adopters list above — this doc is the one home.
 
 ## Design call: guided tour + grounded Q&A, not a free-driving agent
 
