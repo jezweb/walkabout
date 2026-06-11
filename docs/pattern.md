@@ -375,7 +375,20 @@ timestamped tracks, interleave segments — never overlapping).
   defer-generically (no contact, per the owner), a question log + admin
   "Guide questions" page. Three-question check passed live; 0.5–1.1s answers.
   No KV on this app, so the template's `checkRateLimit` was dropped
-  (authed-only, fine). Phase 3 (videos) still pending.
+  (authed-only, fine). Then **Phase 3 (video)** on the `/api/test-auth` path
+  (Google-OAuth, no API-key bootstrap): `record-tour.mjs` mints a session via
+  test-auth and — clients are user-scoped with no seeded sample data — **seeds
+  3 demo clients + an employee + a contract via the API before recording, then
+  `/api/test-auth/cleanup` after** (cascade-delete removes the seed, real data
+  untouched); global data (award rates) needs no seeding. Two test-auth snags
+  for the next OAuth adopter: (1) the deployed `TEST_AUTH_TOKEN` secret ≠ the
+  `.dev.vars` value — sync them or the mint 401s; (2) seed via the browser
+  `context.request` AFTER `addCookies`, not the cookie-minting context (it isn't
+  authed). Then **rebranded** to the client's palette (blue-led primary + an
+  orange `--brand` Button variant for create CTAs) and **re-recorded in one
+  command** — live proof of "stale demos are a choice": visual change →
+  `node record-tour.mjs` → fresh on-brand video, no editing. Full three-phase
+  Walkabout, all live.
 - **RightCover** (3rd, 2026-06-11) — the FULL Phase 1 + 2 on a shadcn host:
   segmented cues + moving spotlight + auto-advance + pause-on-wander + `?tour=N`,
   plus the ask-the-app Guide (cheap model thinking-off, grounded answers, a D1
@@ -415,6 +428,67 @@ timestamped tracks, interleave segments — never overlapping).
     preview` + the app's native-invoke stub (canned data) and the stock
     `record-tour.mjs` works unchanged — a 122s narrated MP4, frame-extraction
     + volumedetect verified, no Tauri involved.
+- **Pod Slab Sales** (5th, 2026-06-11) — full Phase 1 on a shadcn host (React 19
+  + Hono + vite-flare-starter fork). 6 steps on static paths (Dashboard → AI plan
+  wizard → Quotes → Sales orders → Dispatch → Help), restart via cmd+K command-
+  palette action firing a `pss:tour-start` window event (same decoupling as
+  RightCover's `START_TOUR_EVENT`). Lessons folded back:
+  - **Don't trust the first `grep --primary` hit — read the COMPUTED token.**
+    `index.css` line 26 declared `--primary: hsl(221 83% 53%)` (blue), but a later
+    override made the live computed value `hsl(240 5.9% 10%)` (charcoal — what
+    every button actually uses). Keying the halo off `var(--primary)` was right
+    anyway: it painted charcoal, matching the buttons, with zero edits. Sharper
+    statement of the RightCover lesson — the pattern self-corrects even when the
+    author mis-reads the brand colour. (Probe it: `getComputedStyle(el)
+    .getPropertyValue('--tour-ring')` + the `::after` background in a headless
+    page settles the "is it green?" question definitively.)
+  - **Data-gated anchors need an empty-state twin.** Table anchors
+    (`quotes-table`/`orders-table`) only render when rows exist, so a fresh/
+    filtered/empty-test-user view loses the spotlight on that step. Mirror the
+    SAME `data-tour` value onto the empty-state card — the cue selector then
+    matches whichever branch renders. (Surfaced because the headless test user
+    has no orders: step 4 showed `spotlightEls=0`, graceful but unlit.)
+  - **`/api/test-auth` present but `TEST_AUTH_TOKEN` UNSET in prod (404).** Rather
+    than enable a prod auth bypass to verify, ran the whole headless check
+    **locally**: `pnpm dev` + `db:migrate:local` + a local-only token in
+    `.dev.vars`, mint cookie → Playwright with `--autoplay-policy=
+    no-user-gesture-required`, read-only (navigate + listen, never reassign data).
+    Clean fallback to the deployed-secret path — verifies mechanics (offer,
+    6-step nav, autoplay auto-advance, halo, pause-on-wander + resume) without
+    touching prod. Phase 3 video deferred (Google-OAuth-only → needs Jez's
+    one-time storageState capture, same caveat as RightCover).
+- **vite-flare-starter** (6th, 2026-06-11) — a different category from the five
+  above: not a fork that transplanted Walkabout, but the **upstream starter
+  itself shipping it as a first-class module**. Every adopter so far is a fork
+  of this family (Pod Slab Sales, RightCover, HR Helper all are), each doing the
+  same transplant + class-remap by hand. So it earned a place in the starter:
+  `VITE_FEATURE_WALKABOUT` + `src/{client,server}/modules/walkabout/`, and the
+  sample tour walks the starter's own pages (Home → Chat → Skills → Inbox →
+  Settings). Future forks flip a flag instead of transplanting. Full Phase 1 + 2
+  + 3, shipped, deployed, verified live. Lessons folded back:
+  - **This is where the shadcn-native `Tour.tsx` + the `onStepPage()`
+    prefix-match finally landed** (the HR-Helper TODO). Proven live: the
+    self-redirecting `/dashboard/chat` index route (`→ /chat/{uuid}`) held the
+    card at "2 of 5" with no hang. The starter's `Tour.tsx` is the shadcn
+    reference; the FieldProof template keeps its own classes by design.
+  - **Once a family has 3+ adopters, ship the pattern as a module in that
+    family's starter, not as a per-fork transplant.** The transplant tax
+    (copy files, remap ~6 classes, solve headless auth, reinvent the restart
+    mechanism) is paid once upstream instead of N times.
+  - **The Guide rides the host's existing seams, no new plumbing**: it reuses
+    the app's "composer" model role (a fast model with thinking off, the
+    `#87` role contract) and the global rate-limiter, rather than its own model
+    call + KV bucket. An app that already names its model roles gets the Guide
+    nearly free.
+  - **Recorders parameterised, not hardcoded**: `WALKABOUT_URL` /
+    `WALKABOUT_AUTH_STATE` / `WALKABOUT_STEPS`, auth via the family's
+    `/api/test-auth` storageState. Verified shimmer-free with the CDP-screencast
+    capture + the no-colour-pulse conic halo (both synced from this session's
+    parallel skill edits).
+  - **Feature-aware steps**: a step carries an optional `feature` flag and drops
+    when that module is off, with audio keyed by filename so the rest never
+    misaligns. Wart: the chat step mints an empty conversation per run (the only
+    non-self-redirecting way to reach the chat surface).
 
 ## Where it's going next
 
