@@ -13,12 +13,13 @@
  * offsets while Playwright records, then ffmpeg muxes the MP3 on at the
  * measured position. Same trick as record-tour.mjs, minus the in-page tour.
  *
- * Usage: node scripts/record-demo.mjs [demo-name]   (default: all)
+ * Usage:
+ *   node scripts/record-demo.mjs [demo-name]      record (default: all)
+ *   node scripts/record-demo.mjs --check [name]   run actions only — no
+ *     narration, no video, fail loudly. The demo suite as a smoke test:
+ *     every action uses role-based locators, so this also catches
+ *     accessibility regressions (missing roles/names) and dead journeys.
  * Output: media/demo-<name>.mp4
- *
- * AUTH: the localStorage API-key bootstrap is for API-key auth. Cookie/OAuth
- * apps use Playwright `storageState` instead (sign in once, save auth-state.json,
- * load it via `newContext({ storageState })`) — see record-tour.mjs header.
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
@@ -50,17 +51,17 @@ const DEMOS = {
         say: 'Say you only want what the AI flagged for review. One filter, and the list narrows.',
         delayMs: 1800,
         do: (page) =>
-          page.selectOption('[data-tour="visit-filters"] select >> nth=2', 'review'),
+          page.getByRole('combobox', { name: 'Filter by AI verdict' }).selectOption('review'),
       },
       {
         say: 'Tick priority only, and it is just the exceptions that block the job.',
         delayMs: 1200,
-        do: (page) => page.click('[data-tour="visit-filters"] input[type=checkbox]'),
+        do: (page) => page.getByRole('checkbox', { name: 'Priority only' }).check(),
       },
       {
         say: 'Now the other direction. A resident calls, asking about their delivery — head to Properties.',
         delayMs: 1500,
-        do: (page) => page.click('nav >> text=Properties'),
+        do: (page) => page.getByRole('link', { name: 'Properties' }).click(),
       },
       {
         say: 'Type any part of their address…',
@@ -74,7 +75,7 @@ const DEMOS = {
       {
         say: '…search, and the whole visit history for that property is right there — photos included.',
         delayMs: 600,
-        do: (page) => page.click('[data-tour="lookup"] button[type=submit]'),
+        do: (page) => page.getByRole('button', { name: 'Search' }).click(),
       },
     ],
   },
@@ -200,11 +201,52 @@ async function recordDemo(browser, name, demo) {
   console.log(`  wrote ${out} (${Math.round(fs.statSync(out).size / 1024 / 1024)}MB)`);
 }
 
-const pick = process.argv[2];
+// --check: actions only, fast, throw on any failure (the demo suite as a
+// smoke + a11y regression test — recording mode tolerates a missed action
+// to save the take; check mode must not).
+async function checkDemo(browser, name, demo) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto('https://fieldproof.au/operations');
+  await page.evaluate(
+    ([key]) => {
+      localStorage.setItem('app:api_key', key);
+      localStorage.setItem('app:tour', 'done');
+    },
+    [API_KEY]
+  );
+  await page.goto(`https://fieldproof.au${demo.start}`);
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  const failures = [];
+  for (let k = 0; k < demo.segments.length; k++) {
+    const seg = demo.segments[k];
+    if (!seg.do) continue;
+    try {
+      await seg.do(page);
+      await sleep(300);
+    } catch (err) {
+      failures.push(`segment ${k + 1} ("${seg.say.slice(0, 50)}…"): ${String(err).slice(0, 200)}`);
+    }
+  }
+  await context.close();
+  if (failures.length) {
+    console.error(`✗ ${name}\n  ${failures.join('\n  ')}`);
+    return false;
+  }
+  console.log(`✓ ${name} — all ${demo.segments.length} segments actionable`);
+  return true;
+}
+
+const args = process.argv.slice(2);
+const checkMode = args.includes('--check');
+const pick = args.find((a) => !a.startsWith('--'));
 const names = pick ? [pick] : Object.keys(DEMOS);
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+let ok = true;
 for (const name of names) {
   if (!DEMOS[name]) throw new Error(`unknown demo: ${name}`);
-  await recordDemo(browser, name, DEMOS[name]);
+  if (checkMode) ok = (await checkDemo(browser, name, DEMOS[name])) && ok;
+  else await recordDemo(browser, name, DEMOS[name]);
 }
 await browser.close();
+if (!ok) process.exit(1);
