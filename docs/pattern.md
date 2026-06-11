@@ -276,6 +276,26 @@ slice GIFs per step for embedded how-tos (`ffmpeg -ss <offset> -t <dur>`
 against the cue offsets); for Jezweb-owned apps the videos can go public /
 YouTube; record at a 9:16 mobile viewport for YouTube Shorts.
 
+## Lineage — what the predecessors taught
+
+Two earlier Jezweb skills attempted narrated demo videos and were retired in
+favour of Walkabout (removed from the skills repos 2026-06-11):
+
+- **walkthrough-video** (Remotion): screenshot slideshows with transitions.
+  Heavyweight render pipeline for something worse than the real app moving.
+- **product-video** (ClawHQ era): real recordings, two-voice narration, and
+  hand-placed timestamped audio that needed an overlap-validation phase and
+  2–3 AI critique rounds to stay coherent. Its structural flaw is Walkabout's
+  founding principle: timings must come FROM the TTS alignment, so sync is
+  correct by construction, not validated after.
+
+Worth keeping from product-video: the **AI critique loop** — feed the
+rendered video (or extracted frames) to a vision model and iterate until it
+scores well. Walkabout's frame-extraction verification is the lightweight
+version; for high-stakes final cuts, a critique round is a sensible optional
+polish step. Two-voice narration is also possible later (generate two
+timestamped tracks, interleave segments — never overlapping).
+
 ## Adopters
 
 - **FieldProof** (1st, 2026-06-11) — the full version: segmented cues, moving
