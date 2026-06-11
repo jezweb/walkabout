@@ -3,7 +3,16 @@
    angle — Jez's "cover revealing it" idea, 2026-06-11), light sage while
    drawing, settling to dark green, then a soft glow breathes. The ring hugs
    the INSIDE edge: several targets are overflow-hidden cards that would
-   clip an outside halo. Never colour-pulse — it reads as blinking. */
+   clip an outside halo. Never colour-pulse — it reads as blinking.
+
+   ADOPTERS: the colours below (#9dc480 → #5a9434, the glow rgb) are
+   FieldProof's brand. On any other app, recolour the `tour-draw` keyframe
+   and `tour-breathe` glow from the host's `--primary` token instead of
+   hardcoding — `color-mix(in srgb, var(--primary) 55%, white)` while drawing,
+   settling to `var(--primary)`; glow = `var(--primary)`. Then the halo brands
+   itself and survives a later reskin untouched (proven on RightCover). The
+   `@property --tour-ring` initial-value must stay a literal colour — it can't
+   reference `var()` — but it only shows for a frame before the keyframe runs. */
 @property --tour-sweep {
   syntax: '<percentage>';
   initial-value: 0%;

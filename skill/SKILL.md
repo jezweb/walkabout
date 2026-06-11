@@ -31,8 +31,17 @@ add the app to its Adopters list.
 
 ## Phase 1 — the tour
 
-Copy `Tour.tsx`, `steps.ts`, `halo.css` (append to the app's global CSS;
-swap the two colour vars to the app's tokens). Then:
+Copy `Tour.tsx`, `steps.ts`, `halo.css` (append to the app's global CSS).
+**Colour the halo from the host's `--primary` token, don't hardcode it.**
+`halo.css` carries FieldProof's sage→green in a few spots (the `@property` ring
+initial, the `tour-draw` keyframe, the `tour-breathe` glow) — ship those on a
+navy app and the halo is green, invisibly wrong until mid-tour. Key the ring +
+glow off `--primary` instead (`color-mix(in srgb, var(--primary) 55%, white)`
+while the line draws, settling to `var(--primary)`; glow = `var(--primary)`):
+the halo then brands itself AND survives a later reskin untouched. Proven on
+RightCover — a navy rebrand recoloured the halo for free, zero tour edits,
+because it referenced `--primary`. (`@property` initial-value can't take a
+`var()`, so leave that neutral — only the keyframes need the token.) Then:
 
 **Restyle for the host first — the templates carry the source app's classes.**
 `Tour.tsx` and `Assist.tsx` use `brand-card`, `font-display`, `primary-dark`,
@@ -40,8 +49,8 @@ swap the two colour vars to the app's tokens). Then:
 `brand-card` → `rounded-lg border bg-card`, `font-display` → drop, `primary-dark`
 → `primary`, `text-white` → `text-primary-foreground`, `bg-surface` →
 `bg-background`, `text-warning` → `text-amber-600 dark:text-amber-400`.
-`halo.css`'s `outline: var(--token)` works even when the token is a full `hsl()`
-value (shadcn) — no `color-mix` needed.
+The halo is `box-shadow`/conic-ring based (no `outline`); colour it from
+`--primary` per the note above, not via these class swaps.
 
 - Write 5–8 steps, one per page. Card `body` = 2 lines. Narration = 2–5
   `(selector, text)` segments per step in `gen-tour-audio.py`'s SCRIPTS dict

@@ -18,7 +18,7 @@ the first production deployment). Map:
 |---|---|
 | Tour component (full: spotlight cues, auto-advance, pause-on-wander, keyboard, deep links) | `templates/Tour.tsx` |
 | Steps config + localStorage helpers | `templates/steps.ts` (+ generated `cues.gen.ts`) |
-| Halo CSS (3 rules: `.tour-spotlight`, `tour-pulse` keyframes, reduced-motion guard) | `templates/halo.css` |
+| Halo CSS (`.tour-spotlight` + conic `::after` ring, `tour-draw`/`tour-breathe` keyframes, `@property` sweep/ring, reduced-motion guard) | `templates/halo.css` |
 | Audio + cue generator | `templates/gen-tour-audio.py` |
 | Tour → video recorder | `templates/record-tour.mjs` |
 | Feature-demo recorder (timed actions) | `templates/record-demo.mjs` |
@@ -155,6 +155,15 @@ same alignment data but adds nothing over segment-level — stop here.
   colours reads as "the image is blinking/flashing" during narration. Keep
   the outline colour steady and breathe a soft box-shadow glow instead
   (3s cycle). Found by Jez watching the recorded tour.
+- **Colour the halo from `--primary`, not hardcoded hex** — the template
+  carries FieldProof's sage→green; transplanted verbatim onto a differently
+  branded app it ships a green halo that nobody sees until mid-tour. Drive the
+  ring + glow off the host's `--primary` token instead (`color-mix(in srgb,
+  var(--primary) 55%, white)` while drawing → `var(--primary)`; glow =
+  `var(--primary)`). Then it brands itself AND a later reskin recolours it for
+  free. Proven on RightCover: a navy rebrand turned the halo navy with zero
+  tour edits. (`@property` initial-value can't take `var()`; leave it a literal
+  — it only shows for a frame before the keyframe runs.)
 - **Spotlight needs retries**: lazy routes + queries render at their own
   pace. Retry `querySelector` ~10× at 400ms before giving up, and remove the
   halo class on cleanup.
@@ -355,8 +364,10 @@ timestamped tracks, interleave segments — never overlapping).
   question log). No footer, so restart fires via a `START_TOUR_EVENT` window
   event from a How-it-works "Take the tour" button and the Guide FAB. Lessons
   folded back into the skill: the styling transplant is ~6 class mappings on a
-  shadcn host (worth a table); `halo.css`'s `outline: var(--token)` works on a
-  full-`hsl()` token, no `color-mix`; and the deps-`[i]` replay bug bit for real.
+  shadcn host (worth a table); the halo should be coloured from the host's
+  `--primary` token, not the template's hardcoded green — a later navy rebrand
+  then recolours it for free (it did, zero tour edits); and the deps-`[i]`
+  replay bug bit for real.
   Phase 3 (videos) deliberately deferred — the app is OAuth-only, so headless
   recording needs `storageState` or an existing test-auth endpoint, not the
   localStorage API-key path. That's what surfaced the Phase-3 auth caveat now
