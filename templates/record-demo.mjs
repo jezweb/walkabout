@@ -10,8 +10,11 @@
  * Each demo = ordered segments of { say, do?, delayMs? }. The narration is
  * generated ONCE via ElevenLabs /with-timestamps (cached by text hash), so
  * we know the exact second each segment starts — actions fire on those
- * offsets while Playwright records, then ffmpeg muxes the MP3 on at the
+ * offsets while the harness records, then ffmpeg muxes the MP3 on at the
  * measured position. Same trick as record-tour.mjs, minus the in-page tour.
+ *
+ * Capture is LOSSLESS PNG frames via CDP screencast (NOT Playwright's
+ * recordVideo — its adaptive encoder makes the whole page shimmer/blink).
  *
  * Usage:
  *   node scripts/record-demo.mjs [demo-name]      record (default: all)
@@ -137,12 +140,9 @@ async function recordDemo(browser, name, demo) {
   console.log(`recording ${name}…`);
   const narration = await narrationFor(name, demo.segments);
 
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    recordVideo: { dir: OUT_DIR, size: { width: 1440, height: 900 } },
-  });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const setup = await context.newPage();
-  await setup.goto('https://fieldproof.au/operations');
+  await setup.goto('https://your-app.example.com/operations');
   await setup.evaluate(
     ([key]) => {
       localStorage.setItem('app:api_key', key);
@@ -150,19 +150,33 @@ async function recordDemo(browser, name, demo) {
     },
     [API_KEY]
   );
-  const junk = setup.video();
   await setup.close();
 
   const page = await context.newPage();
-  const videoStart = Date.now(); // ≈ first video frame
-  await page.goto(`https://fieldproof.au${demo.start}`);
+  // Lossless frame capture (see header) — frames straight to disk + epoch ts.
+  const framesDir = path.join(OUT_DIR, `frames-${name}`);
+  fs.rmSync(framesDir, { recursive: true, force: true });
+  fs.mkdirSync(framesDir, { recursive: true });
+  const frameMeta = [];
+  let frameN = 0;
+  const cdp = await context.newCDPSession(page);
+  cdp.on('Page.screencastFrame', (ev) => {
+    const file = path.join(framesDir, `f-${String(frameN++).padStart(5, '0')}.png`);
+    fs.writeFileSync(file, Buffer.from(ev.data, 'base64'));
+    frameMeta.push({ file, ts: ev.metadata.timestamp });
+    cdp.send('Page.screencastFrameAck', { sessionId: ev.sessionId }).catch(() => undefined);
+  });
+  await cdp.send('Page.startScreencast', { format: 'png', maxWidth: 1440, maxHeight: 900, everyNthFrame: 1 });
+
+  await page.goto(`https://your-app.example.com${demo.start}`);
   await page.waitForLoadState('networkidle').catch(() => undefined);
   await sleep(800); // let the page settle before the voice starts
 
-  const audioStartMs = Date.now() - videoStart; // where the MP3 lands in the video
+  const videoStart = Date.now();
+  const audioStartEpochS = videoStart / 1000; // narration clock starts now
   for (let k = 0; k < demo.segments.length; k++) {
     const seg = demo.segments[k];
-    const fireAt = audioStartMs + narration.offsets[k] * 1000 + (seg.delayMs ?? 0);
+    const fireAt = narration.offsets[k] * 1000 + (seg.delayMs ?? 0);
     const wait = videoStart + fireAt - Date.now();
     if (wait > 0) await sleep(wait);
     if (seg.do) {
@@ -174,30 +188,48 @@ async function recordDemo(browser, name, demo) {
     }
   }
   // Let the narration finish + a breath.
-  const endAt = videoStart + audioStartMs + narration.durationS * 1000 + 2000;
+  const endAt = videoStart + narration.durationS * 1000 + 2000;
   const tail = endAt - Date.now();
   if (tail > 0) await sleep(tail);
 
-  const video = page.video();
+  await cdp.send('Page.stopScreencast').catch(() => undefined);
+  const endEpochS = Date.now() / 1000;
   await page.close();
-  const webm = await video.path();
   await context.close();
-  if (junk) fs.rmSync(await junk.path(), { force: true });
+  if (frameMeta.length < 5) throw new Error(`only ${frameMeta.length} frames captured`);
+
+  // MP3 offset relative to the first frame.
+  const audioDelayMs = Math.max(0, Math.round((audioStartEpochS - frameMeta[0].ts) * 1000));
+
+  // Concat demuxer with real per-frame durations; last frame holds to end.
+  const lines = ['ffconcat version 1.0'];
+  for (let i = 0; i < frameMeta.length; i++) {
+    const dur =
+      i < frameMeta.length - 1
+        ? frameMeta[i + 1].ts - frameMeta[i].ts
+        : Math.max(0.04, endEpochS - frameMeta[i].ts);
+    lines.push(`file '${frameMeta[i].file}'`);
+    lines.push(`duration ${dur.toFixed(4)}`);
+  }
+  lines.push(`file '${frameMeta.at(-1).file}'`);
+  const listFile = path.join(framesDir, 'list.txt');
+  fs.writeFileSync(listFile, lines.join('\n'));
 
   const out = path.join(OUT_DIR, `demo-${name}.mp4`);
   execFileSync(
     'ffmpeg',
     [
-      '-y', '-i', webm, '-i', narration.mp3Path,
-      '-filter_complex', `[1:a]adelay=${audioStartMs}|${audioStartMs}[aout]`,
+      '-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-i', narration.mp3Path,
+      '-filter_complex', `[1:a]adelay=${audioDelayMs}|${audioDelayMs}[aout]`,
       '-map', '0:v', '-map', '[aout]',
-      '-c:v', 'libx264', '-preset', 'fast', '-crf', '22',
+      '-fps_mode', 'cfr', '-r', '30',
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '128k', '-shortest',
       out,
     ],
     { stdio: 'pipe' }
   );
-  fs.rmSync(webm, { force: true });
+  fs.rmSync(framesDir, { recursive: true, force: true });
   console.log(`  wrote ${out} (${Math.round(fs.statSync(out).size / 1024 / 1024)}MB)`);
 }
 
@@ -207,7 +239,7 @@ async function recordDemo(browser, name, demo) {
 async function checkDemo(browser, name, demo) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  await page.goto('https://fieldproof.au/operations');
+  await page.goto('https://your-app.example.com/operations');
   await page.evaluate(
     ([key]) => {
       localStorage.setItem('app:api_key', key);
@@ -215,7 +247,7 @@ async function checkDemo(browser, name, demo) {
     },
     [API_KEY]
   );
-  await page.goto(`https://fieldproof.au${demo.start}`);
+  await page.goto(`https://your-app.example.com${demo.start}`);
   await page.waitForLoadState('networkidle').catch(() => undefined);
   const failures = [];
   for (let k = 0; k < demo.segments.length; k++) {

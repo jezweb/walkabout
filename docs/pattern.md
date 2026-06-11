@@ -239,6 +239,17 @@ have to stress about doing the demo walk through videos anymore."
    offsets: per-step `adelay=<ms>|<ms>`, then `amix=inputs=N:normalize=0`,
    `-c:v libx264 -c:a aac`. Source-quality narration, sync within ~150ms.
 
+- **Don't capture with Playwright's `recordVideo` — the whole page shimmers.**
+  Its adaptive screencast encoder oscillates compression quality frame to
+  frame, which plays back as the ENTIRE view (header, footer, everything)
+  blinking/flashing several times a second — and an animated halo amplifies
+  it by forcing constant re-encodes. Capture LOSSLESS PNG frames via CDP
+  `Page.startScreencast` (each frame carries an epoch timestamp), assemble
+  with an ffmpeg concat list of real per-frame durations, encode ONCE at
+  crf 18. Verified: 94% of still-moment frames byte-identical vs every
+  frame churning under recordVideo. Bonus: frame timestamps give exact
+  audio alignment. Found by Jez watching the first recorded tour.
+
 **The approach that DOESN'T work — don't re-derive it**: capturing real
 browser audio via `getDisplayMedia` tab-capture. It needs a headed browser
 and a HUMAN approving the picker (and they must pick the TAB — a window/
